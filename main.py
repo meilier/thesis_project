@@ -12,6 +12,7 @@ from parameter_server import PS
 from itertools import chain
 
 import matplotlib.pyplot as plt
+from numpy import math
 # %matplotlib inline
 
 
@@ -122,7 +123,81 @@ for i in range(10):
 #     chain.from_iterable(net.state_dict()['4.weight']) + chain.from_iterable(net.state_dict()['4.bias']) + \
 #     chain.from_iterable(net.state_dict()['6.weight']) + chain.from_iterable(net.state_dict()['6.bias'])
 # myPS = PS(ps_list)
-    
+# def partial_max_changed(old, new, partial):
+#     for k, v in old.items():
+#         no = np.array(old[k])
+#         nn = np.array(new[k])
+#         diff = abs(nn - no)
+#         if "bias" not in k:
+#             min_index = np.argsort(diff, axis = 0)
+#             max_index = min_index[:,::-1]
+#             needed = len(old[k][0]) * partial
+#             for i in range(len(old[k])):
+#                 for j in range(len(old[k][0])):
+#                     if j < needed:
+#                         old[k][i][max_index[i][j]] = new[k][i][max_index[i][j]]
+#                     else:
+#                         break
+#         else:
+#             max_index = np.argsort(-diff)
+#             needed = len(diff) * partial
+#             for i in range(len(old[k])):
+#                 if i < needed:
+#                     old[k][max_index[i]] = new[k][max_index[i]]
+#                 else:
+#                     break
+#     return old
+
+def partial_max_changed(old, new, partial):
+    first = True
+    for k, v in old.items():
+        if first == True:
+            no = np.array(old[k]).flatten()
+            nn = np.array(new[k]).flatten()
+            first = False
+        else:
+            no = np.concatenate((no,np.array(old[k]).flatten()))
+            nn = np.concatenate((nn,np.array(new[k]).flatten()))
+    diff = abs(nn - no)
+    max_index = np.argsort(-diff)
+    needed = len(diff) * partial
+    for i in range(len(diff)):
+        if i < needed:
+            if max_index[i] <= 313599:
+                row = math.floor(max_index[i] / 784)
+                column = max_index[i] % 784
+                old['fc.0.weight'][row][column] = new['fc.0.weight'][row][column]
+            elif max_index[i] >= 313600 and max_index[i] <= 313999 :
+                pos = max_index[i] - 313600
+                old['fc.0.bias'][pos] = new['fc.0.bias'][pos]
+            elif max_index[i] >= 314000 and max_index[i] <= 393999:
+                tmp = max_index[i] - 314000
+                row = math.floor(tmp / 400)
+                column = tmp % 400
+                old['fc.2.weight'][row][column] = new['fc.2.weight'][row][column]
+            elif max_index[i] >= 394000 and max_index[i] <= 394199:
+                pos = max_index[i] - 394000
+                old['fc.2.bias'][pos] = new['fc.2.bias'][pos]
+            elif max_index[i] >=394200 and max_index[i] <= 414199:
+                tmp = max_index[i] - 394200
+                row = math.floor(tmp / 200)
+                column = tmp % 200
+                old['fc.4.weight'][row][column] = new['fc.4.weight'][row][column]
+            elif max_index[i] >= 414200 and max_index[i] <= 414299:
+                pos = max_index[i] - 414200
+                old['fc.4.bias'][pos] = new['fc.4.bias'][pos]
+            elif max_index[i] >= 414300 and max_index[i] <= 415299:
+                tmp = max_index[i] - 414300
+                row = math.floor(tmp / 100)
+                column = tmp % 100
+                old['fc.6.weight'][row][column] = new['fc.6.weight'][row][column]
+            elif max_index[i] >= 415300 and max_index[i] <= 415309:
+                pos = max_index[i] - 415300
+                old['fc.6.bias'][pos] = new['fc.6.bias'][pos]
+        else:
+            break
+    return old
+
 for i in range(120):
     for j in range(10):
         # download
@@ -132,7 +207,9 @@ for i in range(120):
         mynet[j].load_state_dict(model_dict)
         run_epoch(mynet[j], i, j)
         # upload 
-        ps_dict = mynet[j].state_dict()
+        # find 10% max changed
+        current_dict = mynet[j].state_dict()
+        ps_dict = partial_max_changed(tmp_ps_dict,current_dict, 0.1)
 
 
 
