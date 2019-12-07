@@ -198,18 +198,24 @@ def partial_max_changed(old, new, partial):
             break
     return old
 
+
 for i in range(120):
     for j in range(10):
-        # download
-        tmp_ps_dict = ps_dict
+        # download 0.1 max change
+        if i == 0 and j == 0:
+            tmp_ps_dict = ps_dict
+        else:
+            tmp_ps_dict = partial_max_changed(new_pre_pre,new_pre, 0.1)
         model_dict = mynet[j].state_dict()
         model_dict.update(tmp_ps_dict)
         mynet[j].load_state_dict(model_dict)
         run_epoch(mynet[j], i, j)
         # upload 
         # find 10% max changed
-        current_dict = mynet[j].state_dict()
-        ps_dict = partial_max_changed(tmp_ps_dict,current_dict, 0.1)
+        new_pre_pre = ps_dict
+        ps_dict = mynet[j].state_dict()
+        new_pre = ps_dict
+        # ps_dict = partial_max_changed(tmp_ps_dict,current_dict, 0.1)
 
 
 
