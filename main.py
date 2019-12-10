@@ -198,7 +198,7 @@ def upload_partial_max_changed(old, new, partial):
                 ps_dict['fc.6.bias'][pos] += new['fc.6.bias'][pos] - old['fc.6.bias'][pos]
         else:
             break
-def download_partial_max_changed(old, new, partial):
+def download_partial_max_changed(model_dict,old, new, partial):
     first = True
     for k, v in old.items():
         if first == True:
@@ -216,37 +216,36 @@ def download_partial_max_changed(old, new, partial):
             if max_index[i] <= 313599:
                 row = math.floor(max_index[i] / 784)
                 column = max_index[i] % 784
-                old['fc.0.weight'][row][column] = new['fc.0.weight'][row][column]
+                model_dict['fc.0.weight'][row][column] = new['fc.0.weight'][row][column]
             elif max_index[i] >= 313600 and max_index[i] <= 313999 :
                 pos = max_index[i] - 313600
-                old['fc.0.bias'][pos] = new['fc.0.bias'][pos]
+                model_dict['fc.0.bias'][pos] = new['fc.0.bias'][pos]
             elif max_index[i] >= 314000 and max_index[i] <= 393999:
                 tmp = max_index[i] - 314000
                 row = math.floor(tmp / 400)
                 column = tmp % 400
-                old['fc.2.weight'][row][column] = new['fc.2.weight'][row][column]
+                model_dict['fc.2.weight'][row][column] = new['fc.2.weight'][row][column]
             elif max_index[i] >= 394000 and max_index[i] <= 394199:
                 pos = max_index[i] - 394000
-                old['fc.2.bias'][pos] = new['fc.2.bias'][pos]
+                model_dict['fc.2.bias'][pos] = new['fc.2.bias'][pos]
             elif max_index[i] >=394200 and max_index[i] <= 414199:
                 tmp = max_index[i] - 394200
                 row = math.floor(tmp / 200)
                 column = tmp % 200
-                old['fc.4.weight'][row][column] = new['fc.4.weight'][row][column]
+                model_dict['fc.4.weight'][row][column] = new['fc.4.weight'][row][column]
             elif max_index[i] >= 414200 and max_index[i] <= 414299:
                 pos = max_index[i] - 414200
-                old['fc.4.bias'][pos] = new['fc.4.bias'][pos]
+                model_dict['fc.4.bias'][pos] = new['fc.4.bias'][pos]
             elif max_index[i] >= 414300 and max_index[i] <= 415299:
                 tmp = max_index[i] - 414300
                 row = math.floor(tmp / 100)
                 column = tmp % 100
-                old['fc.6.weight'][row][column] = new['fc.6.weight'][row][column]
+                model_dict['fc.6.weight'][row][column] = new['fc.6.weight'][row][column]
             elif max_index[i] >= 415300 and max_index[i] <= 415309:
                 pos = max_index[i] - 415300
-                old['fc.6.bias'][pos] = new['fc.6.bias'][pos]
+                model_dict['fc.6.bias'][pos] = new['fc.6.bias'][pos]
         else:
             break
-    return old
 train_data = DataLoader(train_list[0], batch_size=64, shuffle=True)
 test_data = DataLoader(val_list[0], batch_size=128, shuffle=False)
 criterion = nn.CrossEntropyLoss()
@@ -256,14 +255,15 @@ for i in range(120):
         # download 0.1 max change
         random_a = random.randint(2,9) / 10
         print("random_a is" , random_a)
+        model_dict = mynet[j].state_dict()
         if i == 0 and j == 0:
-            tmp_ps_dict = ps_dict
+            print("first round use model_dict as default")
         else:
             # problem, participant i should not use old_ps as its base old gradients before this epoch train, but this can be use as a way to modift local
             # gradients for its best accuracy rate
-            tmp_ps_dict = download_partial_max_changed(new_pre_pre,new_pre, random_a)
-        model_dict = mynet[j].state_dict()
-        model_dict.update(tmp_ps_dict)
+            download_partial_max_changed(model_dict, new_pre_pre,new_pre, random_a)
+
+        #model_dict.update(tmp_ps_dict)
         mynet[j].load_state_dict(model_dict)
         run_epoch(mynet[j], i, j)
         # upload 
@@ -274,7 +274,7 @@ for i in range(120):
         current_dict = mynet[j].state_dict()
         random_b = random.randint(2,9) / 10
         print("random_b is" , random_b)
-        upload_partial_max_changed(tmp_ps_dict,current_dict, random_b)
+        upload_partial_max_changed(model_dict,current_dict, random_b)
         new_pre = ps_dict
 
 
