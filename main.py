@@ -3,6 +3,8 @@ import numpy as np
 import torch
 from torchvision.datasets import mnist # 导入 pytorch 内置的 mnist 数据
 
+import random
+
 from torch import nn
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
@@ -148,7 +150,55 @@ for i in range(10):
 #                     break
 #     return old
 
-def partial_max_changed(old, new, partial):
+def upload_partial_max_changed(old, new, partial):
+    first = True
+    for k, v in old.items():
+        if first == True:
+            no = np.array(old[k]).flatten()
+            nn = np.array(new[k]).flatten()
+            first = False
+        else:
+            no = np.concatenate((no,np.array(old[k]).flatten()))
+            nn = np.concatenate((nn,np.array(new[k]).flatten()))
+    diff = abs(nn - no)
+    max_index = np.argsort(-diff)
+    needed = len(diff) * partial
+    for i in range(len(diff)):
+        if i < needed:
+            if max_index[i] <= 313599:
+                row = math.floor(max_index[i] / 784)
+                column = max_index[i] % 784
+                ps_dict['fc.0.weight'][row][column] +=  new['fc.0.weight'][row][column] - old['fc.0.weight'][row][column]
+            elif max_index[i] >= 313600 and max_index[i] <= 313999 :
+                pos = max_index[i] - 313600
+                ps_dict['fc.0.bias'][pos] +=  new['fc.0.bias'][pos] - old['fc.0.bias'][pos]
+            elif max_index[i] >= 314000 and max_index[i] <= 393999:
+                tmp = max_index[i] - 314000
+                row = math.floor(tmp / 400)
+                column = tmp % 400
+                ps_dict['fc.2.weight'][row][column] += new['fc.2.weight'][row][column] -  old['fc.2.weight'][row][column] 
+            elif max_index[i] >= 394000 and max_index[i] <= 394199:
+                pos = max_index[i] - 394000
+                ps_dict['fc.2.bias'][pos] += new['fc.2.bias'][pos] - old['fc.2.bias'][pos] 
+            elif max_index[i] >=394200 and max_index[i] <= 414199:
+                tmp = max_index[i] - 394200
+                row = math.floor(tmp / 200)
+                column = tmp % 200
+                ps_dict['fc.4.weight'][row][column] +=  new['fc.4.weight'][row][column] - old['fc.4.weight'][row][column] 
+            elif max_index[i] >= 414200 and max_index[i] <= 414299:
+                pos = max_index[i] - 414200
+                ps_dict['fc.4.bias'][pos] +=  new['fc.4.bias'][pos] - old['fc.4.bias'][pos]
+            elif max_index[i] >= 414300 and max_index[i] <= 415299:
+                tmp = max_index[i] - 414300
+                row = math.floor(tmp / 100)
+                column = tmp % 100
+                ps_dict['fc.6.weight'][row][column] += new['fc.6.weight'][row][column] - old['fc.6.weight'][row][column]
+            elif max_index[i] >= 415300 and max_index[i] <= 415309:
+                pos = max_index[i] - 415300
+                ps_dict['fc.6.bias'][pos] += new['fc.6.bias'][pos] - old['fc.6.bias'][pos]
+        else:
+            break
+def download_partial_max_changed(old, new, partial):
     first = True
     for k, v in old.items():
         if first == True:
@@ -197,25 +247,35 @@ def partial_max_changed(old, new, partial):
         else:
             break
     return old
-
-
+train_data = DataLoader(train_list[0], batch_size=64, shuffle=True)
+test_data = DataLoader(val_list[0], batch_size=128, shuffle=False)
+criterion = nn.CrossEntropyLoss()
+transfer_net = classifier(train_data, test_data)
 for i in range(120):
     for j in range(10):
         # download 0.1 max change
+        random_a = random.randint(2,9) / 10
+        print("random_a is" , random_a)
         if i == 0 and j == 0:
             tmp_ps_dict = ps_dict
         else:
-            tmp_ps_dict = partial_max_changed(new_pre_pre,new_pre, 0.1)
+            # problem, participant i should not use old_ps as its base old gradients before this epoch train, but this can be use as a way to modift local
+            # gradients for its best accuracy rate
+            tmp_ps_dict = download_partial_max_changed(new_pre_pre,new_pre, random_a)
         model_dict = mynet[j].state_dict()
         model_dict.update(tmp_ps_dict)
         mynet[j].load_state_dict(model_dict)
         run_epoch(mynet[j], i, j)
         # upload 
         # find 10% max changed
-        new_pre_pre = ps_dict
-        ps_dict = mynet[j].state_dict()
+        tansfer_dict= transfer_net.state_dict()
+        tansfer_dict.update(ps_dict)
+        new_pre_pre = tansfer_dict
+        current_dict = mynet[j].state_dict()
+        random_b = random.randint(2,9) / 10
+        print("random_b is" , random_b)
+        upload_partial_max_changed(tmp_ps_dict,current_dict, random_b)
         new_pre = ps_dict
-        # ps_dict = partial_max_changed(tmp_ps_dict,current_dict, 0.1)
 
 
 
