@@ -98,6 +98,9 @@ print('val_0:', len(val_list[0]), 'val_1:', len(val_list[1]))
 # global simple PS
 ps_dict = torch.load(os.getcwd()+"/mnist-6000-1000-base.pth")
 
+# upload time counter
+upload_count = np.zeros(415310,dtype=int)
+
 # mynet list
 mynet = []
 # netwrok definition
@@ -165,6 +168,7 @@ def upload_partial_max_changed(old, new, partial):
     needed = len(diff) * partial
     for i in range(len(diff)):
         if i < needed:
+            upload_count[max_index[i]] += 1
             if max_index[i] <= 313599:
                 row = math.floor(max_index[i] / 784)
                 column = max_index[i] % 784
@@ -198,6 +202,47 @@ def upload_partial_max_changed(old, new, partial):
                 ps_dict['fc.6.bias'][pos] += new['fc.6.bias'][pos] - old['fc.6.bias'][pos]
         else:
             break
+def download_partial_max_changed_depend_on_counter(model_dict, partial):
+    res = np.argsort(-upload_count)
+    needed = len(res) * partial
+    for i in range(len(res)):
+        if i < needed:
+            if res[i] <= 313599:
+                row = math.floor(res[i] / 784)
+                column = res[i] % 784
+                model_dict['fc.0.weight'][row][column] = ps_dict['fc.0.weight'][row][column]
+            elif res[i] >= 313600 and res[i] <= 313999 :
+                pos = res[i] - 313600
+                model_dict['fc.0.bias'][pos] = ps_dict['fc.0.bias'][pos]
+            elif res[i] >= 314000 and res[i] <= 393999:
+                tmp = res[i] - 314000
+                row = math.floor(tmp / 400)
+                column = tmp % 400
+                model_dict['fc.2.weight'][row][column] = ps_dict['fc.2.weight'][row][column]
+            elif res[i] >= 394000 and res[i] <= 394199:
+                pos = res[i] - 394000
+                model_dict['fc.2.bias'][pos] = ps_dict['fc.2.bias'][pos]
+            elif res[i] >=394200 and res[i] <= 414199:
+                tmp = res[i] - 394200
+                row = math.floor(tmp / 200)
+                column = tmp % 200
+                model_dict['fc.4.weight'][row][column] = ps_dict['fc.4.weight'][row][column]
+            elif res[i] >= 414200 and res[i] <= 414299:
+                pos = res[i] - 414200
+                model_dict['fc.4.bias'][pos] = ps_dict['fc.4.bias'][pos]
+            elif res[i] >= 414300 and res[i] <= 415299:
+                tmp = res[i] - 414300
+                row = math.floor(tmp / 100)
+                column = tmp % 100
+                model_dict['fc.6.weight'][row][column] = ps_dict['fc.6.weight'][row][column]
+            elif res[i] >= 415300 and res[i] <= 415309:
+                pos = res[i] - 415300
+                model_dict['fc.6.bias'][pos] = ps_dict['fc.6.bias'][pos]
+        else:
+            break
+
+
+
 def download_partial_max_changed(model_dict,old, new, partial):
     first = True
     for k, v in old.items():
@@ -253,15 +298,16 @@ transfer_net = classifier(train_data, test_data)
 for i in range(120):
     for j in range(10):
         # download 0.1 max change
-        random_a = random.randint(2,9) / 10
-        print("random_a is" , random_a)
+        #random_a = random.randint(2,9) / 10
+        #print("random_a is" , random_a)
         model_dict = mynet[j].state_dict()
         if i == 0 and j == 0:
             print("first round use model_dict as default")
         else:
             # problem, participant i should not use old_ps as its base old gradients before this epoch train, but this can be use as a way to modift local
             # gradients for its best accuracy rate
-            download_partial_max_changed(model_dict, new_pre_pre,new_pre, random_a)
+            # download_partial_max_changed(model_dict, new_pre_pre,new_pre, random_a)
+            download_partial_max_changed_depend_on_counter(model_dict,0.1)
 
         #model_dict.update(tmp_ps_dict)
         mynet[j].load_state_dict(model_dict)
@@ -273,8 +319,8 @@ for i in range(120):
         new_pre_pre = tansfer_dict
         current_dict = mynet[j].state_dict()
         random_b = random.randint(2,9) / 10
-        print("random_b is" , random_b)
-        upload_partial_max_changed(model_dict,current_dict, random_b)
+        #print("random_b is" , random_b)
+        upload_partial_max_changed(model_dict,current_dict, 0.8)
         new_pre = ps_dict
 
 
