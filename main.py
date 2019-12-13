@@ -14,7 +14,8 @@ from itertools import chain
 import matplotlib.pyplot as plt
 # %matplotlib inline
 
-
+single_avg = []
+last_ten = []
 
 train_set = mnist.MNIST('./data', train=True, download=True)
 test_set = mnist.MNIST('./data', train=False, download=True)
@@ -78,6 +79,8 @@ def run_epoch(net, epoch, id):
         print('epoch: {}, id:{},Train Loss: {:.6f}, Train Acc: {:.6f}, Eval Loss: {:.6f}, Eval Acc: {:.6f}'
             .format(epoch, id, train_loss / len(net.train_data), train_acc / len(net.train_data), 
                         eval_loss / len(net.test_data), eval_acc / len(net.test_data)))
+        if epoch >= 90:
+            last_ten.append(eval_acc / len(test_data))
 
 train_set = mnist.MNIST('./data', train=True, transform=data_tf, download=True) # 重新载入数据集，申明定义的数据变换
 test_set = mnist.MNIST('./data', train=False, transform=data_tf, download=True)
@@ -122,17 +125,23 @@ for i in range(10):
 #     chain.from_iterable(net.state_dict()['4.weight']) + chain.from_iterable(net.state_dict()['4.bias']) + \
 #     chain.from_iterable(net.state_dict()['6.weight']) + chain.from_iterable(net.state_dict()['6.bias'])
 # myPS = PS(ps_list)
-    
-for i in range(120):
-    for j in range(10):
+
+for j in range(10):   
+    for i in range(100):
         # download
-        tmp_ps_dict = ps_dict
-        model_dict = mynet[j].state_dict()
-        model_dict.update(tmp_ps_dict)
-        mynet[j].load_state_dict(model_dict)
         run_epoch(mynet[j], i, j)
         # upload 
-        ps_dict = mynet[j].state_dict()
+    sum = 0
+    for val in last_ten:
+        sum = sum + val
+    single_avg.append(sum / 10)
+    last_ten = []
+    print("arg " + str(j) + "is: " + str(sum / 10))
+avg_sum = 0
+for i, val in enumerate(single_avg):
+    print("train list: " + str(i) + "avg value: " + str(val))
+    avg_sum = avg_sum + val
+print("first all round avg is: " + str(avg_sum/10))
 
 
 
