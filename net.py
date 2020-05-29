@@ -9,13 +9,11 @@ class classifier(nn.Module):
     def __init__(self, train_data, test_data):
         super(classifier, self).__init__()
         self.fc = nn.Sequential(
-            nn.Linear(784, 400),
+            nn.Linear(3072, 64),
             nn.ReLU(),
-            nn.Linear(400, 200),
+            nn.Linear(64, 40),
             nn.ReLU(),
-            nn.Linear(200, 100),
-            nn.ReLU(),
-            nn.Linear(100, 10)
+            nn.Linear(40, 10)
         )
         self.train_data = train_data
         self.test_data = test_data
