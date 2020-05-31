@@ -1,4 +1,5 @@
 import os
+import sys
 import numpy as np
 import torch
 from torchvision.datasets import mnist # 导入 pytorch 内置的 mnist 数据
@@ -17,7 +18,20 @@ import matplotlib.pyplot as plt
 from numpy import math
 # %matplotlib inline
 
-
+class Logger(object):
+    def __init__(self, fileN="Default.log"):
+        self.terminal = sys.stdout
+        self.log = open(fileN, "w")
+ 
+    def write(self, message):
+        self.terminal.write(message)
+        self.log.write(message)
+        self.flush() #每次写入后刷新到文件中，防止程序意外结束
+    def flush(self):
+        self.log.flush()
+ 
+ 
+sys.stdout = Logger("res.txt")
 
 train_set = CIFAR10('./cifardata', train=True, download=True)
 test_set = CIFAR10('./cifardata', train=False, download=True)
@@ -37,7 +51,7 @@ def run_epoch(net, epoch, id):
         train_loss = 0
         train_acc = 0
         net.train()
-        torch.save(net.state_dict(), os.getcwd() + "/cifar1.pth")
+        #torch.save(net.state_dict(), os.getcwd() + "/cifar1.pth")
         for im, label in net.train_data:
             im = Variable(im)
             label = Variable(label)
