@@ -250,7 +250,7 @@ for i in range(120):
         # upload 
         # find 10% max changed
         current_dict = mynet[j].state_dict()
-        ps_dict = partial_max_changed_cifar_cnn(tmp_ps_dict,current_dict, 0.1)
+        ps_dict = partial_max_changed_cifar_cnn(tmp_ps_dict,current_dict, 0.5)
 
 
 

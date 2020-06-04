@@ -198,7 +198,9 @@ def partial_max_changed(old, new, partial):
             break
     return old
 
-for i in range(120):
+
+
+for i in range(2):
     for j in range(10):
         # download
         tmp_ps_dict = ps_dict
@@ -211,7 +213,7 @@ for i in range(120):
         current_dict = mynet[j].state_dict()
         ps_dict = partial_max_changed(tmp_ps_dict,current_dict, 0.1)
 
-
+torch.save(mynet[0].state_dict(), os.getcwd() + "/mnist-train-net0.pth")
 
 # upload 1, download 1
 # upload 1, download 0.1
