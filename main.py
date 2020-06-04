@@ -200,7 +200,7 @@ def partial_max_changed(old, new, partial):
 
 
 
-for i in range(2):
+for i in range(60):
     for j in range(10):
         # download
         tmp_ps_dict = ps_dict
