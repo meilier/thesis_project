@@ -246,11 +246,13 @@ for i in range(120):
         model_dict = mynet[j].state_dict()
         model_dict.update(tmp_ps_dict)
         mynet[j].load_state_dict(model_dict)
+        torch.save(mynet[j].state_dict(), os.getcwd() + "/cifarpth-befor/epoch" + str(i) + "peer" + str(j) +".pth")
         run_epoch(mynet[j], i, j)
+        torch.save(mynet[j].state_dict(), os.getcwd() + "/cifarpth/epoch" + str(i) + "peer" + str(j) +".pth")
         # upload 
         # find 10% max changed
         current_dict = mynet[j].state_dict()
-        ps_dict = partial_max_changed_cifar_cnn(tmp_ps_dict,current_dict, 0.5)
+        ps_dict = partial_max_changed_cifar_cnn(tmp_ps_dict,current_dict, 0.3)
 
 
 
